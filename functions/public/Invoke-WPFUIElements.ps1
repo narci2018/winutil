@@ -1,4 +1,4 @@
-function Invoke-WPFUIElements {
+﻿function Invoke-WPFUIElements {
     <#
     .SYNOPSIS
         Adds UI elements to a specified Grid in the WinUtil GUI based on a JSON configuration.
@@ -150,12 +150,15 @@ function Invoke-WPFUIElements {
 
             $label = New-Object Windows.Controls.Label
             $categoryCleanName = $category -replace ".*__", ""
-            $label.Content = $categoryCleanName
+            $label.Content = Get-WinUtilText $categoryCleanName
             $label.Focusable = $true
             $label.IsTabStop = $true
             [System.Windows.Automation.AutomationProperties]::SetName($label, $categoryCleanName)
             $label.SetResourceReference([Windows.Controls.Control]::FontSizeProperty, "HeaderFontSize")
-            $label.SetResourceReference([Windows.Controls.Control]::FontFamilyProperty, "HeaderFontFamily")
+            $label.SetResourceReference([Windows.Controls.Control]::FontFamilyProperty, "FontFamily")
+            $label.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "MainForegroundColor")
+            $label.FontWeight = [Windows.FontWeights]::SemiBold
+            $label.Padding = New-Object Windows.Thickness(0, 10, 0, 6)
             $label.UseLayoutRounding = $true
             $stackPanelContainer.Children.Add($label) | Out-Null
             $sync[$category] = $label
@@ -192,10 +195,16 @@ function Invoke-WPFUIElements {
                 switch ($entryInfo.Type) {
                     "Toggle" {
                         $dockPanel = New-Object Windows.Controls.DockPanel
+                        # Chinese text needs more vertical room than the default tight
+                        # layout; give every toggle row a minimum height with breathing
+                        # room so CJK glyphs are never clipped or visually stacked.
+                        $dockPanel.MinHeight = 30
+                        $dockPanel.Margin = New-Object Windows.Thickness(0, 3, 0, 3)
                         [System.Windows.Automation.AutomationProperties]::SetName($dockPanel, $entryInfo.Content)
                         $checkBox = New-Object Windows.Controls.CheckBox
                         $checkBox.Name = $entryInfo.Name
                         $checkBox.HorizontalAlignment = "Right"
+                        $checkBox.VerticalAlignment = "Center"
                         $checkBox.UseLayoutRounding = $true
                         [System.Windows.Automation.AutomationProperties]::SetName($checkBox, $entryInfo.Content)
                         $dockPanel.Children.Add($checkBox) | Out-Null
@@ -205,6 +214,7 @@ function Invoke-WPFUIElements {
                         $label.Content = $entryInfo.Content
                         $label.ToolTip = $entryInfo.Description
                         $label.HorizontalAlignment = "Left"
+                        $label.VerticalAlignment = "Center"
                         $label.SetResourceReference([Windows.Controls.Control]::FontSizeProperty, "FontSize")
                         $label.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "MainForegroundColor")
                         $label.UseLayoutRounding = $true
@@ -219,7 +229,19 @@ function Invoke-WPFUIElements {
                             Invoke-WPFSelectedCheckboxesUpdate -type "Add" -checkboxName $Sender.name
                             # Skip applying tweaks while an import is restoring toggle states
                             if (-not $sync.ImportInProgress) {
-                                Invoke-WinUtilTweaks $Sender.name
+                                # Round 12: the registry/service/script work runs in a job worker
+                                # now. Doing it inline blocked the dispatcher for the whole
+                                # Get-Service/Set-Service/registry/script duration and made the
+                                # toggle feel laggy. The selection list was already updated above
+                                # on the UI thread, so run just this tweak, off-thread.
+                                $tName = $Sender.name
+                                Start-WinUtilJob -Name "Toggle" -Description (Get-WinUtilTweakDisplayName -Key $tName) -QueueIfBusy -Parameters @{
+                                    ToggleName = $tName
+                                    UndoAction = $false
+                                } -ScriptBlock {
+                                    param($ToggleName, $UndoAction)
+                                    Invoke-WinUtilTweaks $ToggleName -undo:$UndoAction
+                                }
                             }
                         })
 
@@ -228,7 +250,15 @@ function Invoke-WPFUIElements {
                             Invoke-WPFSelectedCheckboxesUpdate -type "Remove" -checkboxName $Sender.name
                             # Skip undoing tweaks while an import is restoring toggle states
                             if (-not $sync.ImportInProgress) {
-                                Invoke-WinUtiltweaks $Sender.name -undo $true
+                                # Round 12: same off-thread handoff as Add_Checked above.
+                                $tName = $Sender.name
+                                Start-WinUtilJob -Name "Toggle" -Description (Get-WinUtilTweakDisplayName -Key $tName) -QueueIfBusy -Parameters @{
+                                    ToggleName = $tName
+                                    UndoAction = $true
+                                } -ScriptBlock {
+                                    param($ToggleName, $UndoAction)
+                                    Invoke-WinUtilTweaks $ToggleName -undo:$UndoAction
+                                }
                             }
                         })
                     }
@@ -335,9 +365,9 @@ function Invoke-WPFUIElements {
                                 $comboBox.SelectedIndex = @($comboBox.Items.Content).IndexOf([string]$comboBox.Tag.State)
                             } catch {
                                 $unknownStateItem = New-Object Windows.Controls.ComboBoxItem
-                                $unknownStateItem.Content = "Custom / Unknown - select a state"
+                                $unknownStateItem.Content = Get-WinUtilText "Custom / Unknown - select a state"
                                 $unknownStateItem.IsEnabled = $false
-                                $unknownStateItem.ToolTip = "$($_.Exception.Message) Select one of the supported states to replace these values."
+                                $unknownStateItem.ToolTip = "$($_.Exception.Message) $(Get-WinUtilText 'Select one of the supported states to replace these values.')"
                                 $comboBox.Items.Add($unknownStateItem) | Out-Null
                                 $comboBox.SelectedItem = $unknownStateItem
                                 $comboBox.ToolTip = $unknownStateItem.ToolTip

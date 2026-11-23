@@ -8,16 +8,16 @@ $OFS = "`r`n"
 $sync = [Hashtable]::Synchronized(@{})
 $sync.configs = @{}
 
-$script = (Get-Content -Path scripts\start.ps1) -replace '#{replaceme}', (Get-Date -Format 'yy.MM.dd')
+$script = (Get-Content -Path scripts\start.ps1 -Encoding UTF8) -replace '#{replaceme}', (Get-Date -Format 'yy.MM.dd')
 $isLocalCompile = -not [string]::Equals($env:GITHUB_ACTIONS, "true", [StringComparison]::OrdinalIgnoreCase)
 $script = $script -replace '#{islocalcompile}', $isLocalCompile.ToString().ToLowerInvariant()
 
 $script += Get-ChildItem -Path functions -Recurse -File | ForEach-Object {
-    Get-Content -Path $_.FullName -Raw
+    Get-Content -Path $_.FullName -Raw -Encoding UTF8
 }
 
 Get-ChildItem config -File -Filter *.json | ForEach-Object {
-    $obj = Get-Content -Path $_.FullName -Raw | ConvertFrom-Json
+    $obj = Get-Content -Path $_.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
 
     if ($_.Name -eq "applications.json") {
         $fixed = [ordered]@{}
@@ -30,7 +30,8 @@ Get-ChildItem config -File -Filter *.json | ForEach-Object {
     $json = $obj | ConvertTo-Json -Depth 10
 
     $sync.configs[$_.BaseName] = $obj
-    $script += "`$sync.configs.$($_.BaseName) = @'`r`n$json`r`n'@ | ConvertFrom-Json"
+    # Bracket syntax: a BaseName like "lang_zh-CN" (with a dash) is not a valid bare variable name
+    $script += "`$sync.configs['$($_.BaseName)'] = @'`r`n$json`r`n'@ | ConvertFrom-Json"
 }
 
 # Icons are one PNG per app in config\icons\<key>.png, named after the key in applications.json.
@@ -43,15 +44,16 @@ $iconsObject = [pscustomobject]$icons
 $sync.configs["icons"] = $iconsObject
 $script += "`$sync.configs.icons = @'`r`n$($iconsObject | ConvertTo-Json)`r`n'@ | ConvertFrom-Json"
 
-$xaml = Get-Content -Path xaml\inputXML.xaml -Raw
+$xaml = Get-Content -Path xaml\inputXML.xaml -Raw -Encoding UTF8
 $script += "`$inputXML = @'`r`n$xaml`r`n'@"
 
-$autounattendXml = Get-Content -Path tools\autounattend.xml -Raw
+$autounattendXml = Get-Content -Path tools\autounattend.xml -Raw -Encoding UTF8
 $script += "`$WinUtilAutounattendXml = @'`r`n$autounattendXml`r`n'@"
 
-$script += Get-Content -Path scripts\main.ps1 -Raw
+$script += Get-Content -Path scripts\main.ps1 -Raw -Encoding UTF8
 
-Set-Content -Path winutil.ps1 -Value $script
+# UTF8 with BOM so PowerShell 5.1 parses the embedded Chinese/emoji text correctly
+Set-Content -Path winutil.ps1 -Value $script -Encoding UTF8
 
 if ($Run) {
     .\Winutil.ps1

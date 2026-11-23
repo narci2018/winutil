@@ -1,4 +1,4 @@
-function Show-CustomDialog {
+﻿function Show-CustomDialog {
     <#
     .SYNOPSIS
     Displays a custom dialog box with an image, heading, message, and an OK button.
@@ -100,7 +100,7 @@ function Show-CustomDialog {
 
     # Create a custom dialog window
     $dialog = New-Object Windows.Window
-    $dialog.Title = $Title
+    $dialog.Title = Get-WinUtilText $Title
     $dialog.Height = $Height
     $dialog.Width = $Width
     $dialog.Margin = New-Object Windows.Thickness(10)  # Add margin to the entire dialog box
@@ -241,7 +241,7 @@ function Show-CustomDialog {
 
     # Add OK button
     $okButton = New-Object Windows.Controls.Button
-    $okButton.Content = "OK"
+    $okButton.Content = Get-WinUtilText "OK"
     $okButton.FontSize = $FontSize
     $okButton.Width = 80
     $okButton.Height = 30

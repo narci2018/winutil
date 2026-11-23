@@ -1,4 +1,4 @@
-function Invoke-WinUtilCloseRequest {
+﻿function Invoke-WinUtilCloseRequest {
     <#
         .SYNOPSIS
             Asks what to do about work that is still running when the window is closed
@@ -49,15 +49,12 @@ function Invoke-WinUtilCloseRequest {
     # language, so "Yes" in the text would not match a button reading "Ja". The stated minute
     # bound is Wait-WinUtilRemainingWork's default, so a user who chooses to wait knows when the
     # stop is requested anyway.
-    $answer = Show-WinUtilJobCloseMessage -Button "YesNoCancel" -Icon "Warning" -Title "$RunningJob is still running" -Message @"
-$RunningJob has not finished yet.
+    $answer = Show-WinUtilJobCloseMessage -Button "YesNoCancel" -Icon "Warning" -Title ((Get-WinUtilText "{0} is still running") -f $RunningJob) -Message @"
+$RunningJob $(Get-WinUtilText 'has not finished yet.')
 $queuedNote
-Close the window and let it finish in the console?
+$(Get-WinUtilText 'Close the window and let it finish in the console?')
 
-WinUtil will exit on its own when the job is done. It waits up to 120
-minutes, then requests that the job stop and exits. If you choose not to
-wait, WinUtil requests a stop and closes now. An installer already running
-may continue until it returns. Cancel keeps WinUtil open.
+$(Get-WinUtilText 'WinUtil will exit on its own when the job is done. It waits up to 120 minutes, then requests that the job stop and exits. If you choose not to wait, WinUtil requests a stop and closes now. An installer already running may continue until it returns. Cancel keeps WinUtil open.')
 "@
 
     switch ("$answer") {

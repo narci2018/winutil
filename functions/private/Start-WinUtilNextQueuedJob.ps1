@@ -1,4 +1,4 @@
-function Start-WinUtilNextQueuedJob {
+﻿function Start-WinUtilNextQueuedJob {
     <#
         .SYNOPSIS
             Starts the oldest queued job if the slot is free
@@ -191,7 +191,7 @@ function Update-WinUtilJobQueueUI {
         return
     }
 
-    $sync.JobQueueRunning.Text = if ($running) { "Running: $running" } else { "Nothing running" }
+    $sync.JobQueueRunning.Text = if ($running) { "$(Get-WinUtilText 'Running'): $running" } else { Get-WinUtilText "Nothing running" }
     $sync.JobQueueItems.Children.Clear()
 
     for ($index = 0; $index -lt $queued.Count; $index++) {
@@ -218,6 +218,7 @@ function Update-WinUtilJobQueueUI {
             @{ Glyph = 0xE70D; Tip = "Run later"; Enabled = $index -lt ($queued.Count - 1); Click = { Move-WinUtilQueuedJob -Id $this.Tag -Direction Down } },
             @{ Glyph = 0xE711; Tip = "Cancel"; Enabled = $true; Click = { Remove-WinUtilQueuedJob -Id $this.Tag } }
         )) {
+            $action.Tip = Get-WinUtilText $action.Tip
             $button = New-Object Windows.Controls.Button
             $button.FontFamily = "Segoe MDL2 Assets"
             $button.Content = [string][char]$action.Glyph

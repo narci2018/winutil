@@ -16,6 +16,11 @@ function Start-WinUtilTabWarmup {
     # Win11ISO is left out: building it runs the existing work check, which raises the resume
     # prompt while the user is on another tab. That check belongs to opening the tab, not warming
     # it.
+    # Round 13: no temp or offline e2e warmup for the Uninstall tab - its scan
+    # reads hundreds of registry keys and AppX packages, so it must stay lazy
+    # until the user actually opens the tab.
+    # Round 14: same for the MAC tab - it scans adapters and CIM instances and
+    # must stay lazy too.
     $pending = [System.Collections.Queue]::new()
     foreach ($tab in @("Tweaks", "Config", "AppX")) {
         if (-not $sync.InitializedTabs[$tab]) {

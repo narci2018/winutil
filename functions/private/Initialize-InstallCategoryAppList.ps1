@@ -1,4 +1,4 @@
-function Initialize-InstallCategoryAppList {
+﻿function Initialize-InstallCategoryAppList {
     <#
         .SYNOPSIS
             Clears the Target Element and sets up a "Loading" message. This is done, because loading of all apps can take a bit of time in some scenarios
@@ -44,13 +44,16 @@ function Initialize-InstallCategoryAppList {
             $binding.RelativeSource = New-Object Windows.Data.RelativeSource([Windows.Data.RelativeSourceMode]::FindAncestor, [Windows.Controls.ItemsControl], 1)
             [void][Windows.Data.BindingOperations]::SetBinding($categoryContainer, [Windows.FrameworkElement]::WidthProperty, $binding)
 
-            # Add category label to container
+            # Add category label to container. A TextBlock-based label would read as body text;
+            # the accent glyph + semibold name gives the header its own voice (WinUI list group)
             $toggleButton = New-Object Windows.Controls.Label
-            $toggleButton.Content = "- $Category"
+            $toggleButton.Content = "- $(Get-WinUtilText $Category)"
             $toggleButton.Tag = "CategoryToggleButton"
             $toggleButton.SetResourceReference([Windows.Controls.Control]::FontSizeProperty, "HeaderFontSize")
-            $toggleButton.SetResourceReference([Windows.Controls.Control]::FontFamilyProperty, "HeaderFontFamily")
-            $toggleButton.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "LabelboxForegroundColor")
+            $toggleButton.SetResourceReference([Windows.Controls.Control]::FontFamilyProperty, "FontFamily")
+            $toggleButton.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "MainForegroundColor")
+            $toggleButton.FontWeight = [Windows.FontWeights]::SemiBold
+            $toggleButton.Padding = New-Object Windows.Thickness(0, 6, 0, 4)
             $toggleButton.Cursor = [System.Windows.Input.Cursors]::Hand
             $toggleButton.HorizontalAlignment = [Windows.HorizontalAlignment]::Stretch
             $sync.$Category = $toggleButton

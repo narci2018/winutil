@@ -1,4 +1,4 @@
-function Invoke-WPFTab {
+﻿function Invoke-WPFTab {
 
     <#
 
@@ -34,7 +34,26 @@ function Invoke-WPFTab {
                 $sync["$ClickedTab"].IsChecked = $true
             }
         }
-        $sync.currentTab = $sync.WPFTabNav.Items[$tabNumber].Header
+        # currentTab is the canonical tab key, never the localized Header: the render queue,
+        # deferral checks and search filters compare it against "Install"/"Tweaks"/"AppX"
+        # literals, and tab content is rebuilt through Initialize-WinUtilTabContent's switch.
+        $tabKeyByIndex = @("Install", "Tweaks", "Config", "Updates", "Win11ISO", "AppX", "Uninstall Applications", "Change MAC Address")
+        $sync.currentTab = $tabKeyByIndex[$tabNumber]
+    }
+
+    # Keep the NavigationView selection in sync with programmatic tab switches
+    # (keyboard shortcuts, WPFAppxRemoval, startup). The NavSyncing guard prevents
+    # the SelectionChanged handler from re-entering Invoke-WPFTab.
+    if ($sync.ContainsKey('NavView') -and $sync.NavView) {
+        try {
+            $navTag = "WPFTab$($tabNumber + 1)"
+            $navItem = @($sync.NavView.MenuItems) | Where-Object { $_.Tag -eq $navTag } | Select-Object -First 1
+            if ($navItem -and -not [object]::ReferenceEquals($sync.NavView.SelectedItem, $navItem)) {
+                $sync.NavSyncing = $true
+                $sync.NavSyncingAt = Get-Date
+                $sync.NavView.SelectedItem = $navItem
+            }
+        } catch { }
     }
 
     Measure-WinUtilStep -Scope "Tab" -Name "$ClickedTab content" -ScriptBlock {
@@ -54,7 +73,7 @@ function Invoke-WPFTab {
     Measure-WinUtilStep -Scope "Tab" -Name "$ClickedTab search bar" -ScriptBlock {
         # Show search bar in Install, Tweaks, and AppX tabs
         $searchIcon = ($sync.Form.FindName("SearchBar").Parent.Children | Where-Object { $_ -is [System.Windows.Controls.TextBlock] -and $_.Text -eq [char]0xE721 })[0]
-        if ($tabNumber -eq 0 -or $tabNumber -eq 1 -or $tabNumber -eq 5) {
+        if ($tabNumber -eq 0 -or $tabNumber -eq 1 -or $tabNumber -eq 5 -or $tabNumber -eq 6) {
             $sync.SearchBar.Visibility = "Visible"
             if ($searchIcon) { $searchIcon.Visibility = "Visible" }
         } else {

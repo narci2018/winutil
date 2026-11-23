@@ -30,11 +30,10 @@ function New-WinUtilFossBadge {
         $keyhole.Data = [Windows.Media.Geometry]::Parse("M 7.673,15.751 A 5.8,5.8 0 1 1 14.327,15.751")
         $keyhole.StrokeThickness = 3.4
     } else {
-        # Triangle filling the top right corner, its outer corner rounded to match AppEntryBorderStyle
-        $backdrop.Data = [Windows.Media.Geometry]::Parse("M 0,0 L 17,0 A 5,5 0 0 1 22,5 L 22,22 Z")
-        # Keyhole centred on the triangle's incentre (15.56, 6.44) so it keeps the same
-        # 1.8 clearance from all three edges
-        $keyhole.Data = [Windows.Media.Geometry]::Parse("M 13.61,9.225 A 3.4,3.4 0 1 1 17.51,9.225")
+        # Triangle filling the top right corner, its outer corner rounded to match AppEntryBorderStyle (8px card radius)
+        $backdrop.Data = [Windows.Media.Geometry]::Parse("M 0,0 L 14,0 A 8,8 0 0 1 22,8 L 22,22 Z")
+        # Keyhole centred on the triangle's incentre so it keeps clearance from all three edges
+        $keyhole.Data = [Windows.Media.Geometry]::Parse("M 13.2,10.1 A 3.4,3.4 0 1 1 17.1,10.1")
         $keyhole.StrokeThickness = 2.4
     }
 

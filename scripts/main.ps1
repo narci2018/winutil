@@ -1,4 +1,4 @@
-Write-Host @"
+﻿Write-Host @"
     CCCCCCCCCCCCCTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
  CCC::::::::::::CT:::::::::::::::::::::TT:::::::::::::::::::::T
 CC:::::::::::::::CT:::::::::::::::::::::TT:::::::::::::::::::::T
@@ -33,8 +33,29 @@ $sync.configs.appxHashtable = @{}
 $sync.configs.appx.PSObject.Properties | ForEach-Object {
     $sync.configs.appxHashtable[$_.Name] = $_.Value
 }
-$sync.preferences.theme = "Auto"
+$sync.preferences.theme = "Modern"
 $sync.preferences.packagemanager = "Winget"
+
+# ---- ModernWpf (WinUI/Fluent 控件库) ----
+# 在 XAML 解析之前加载:inputXML.xaml 的合并字典引用 clr-namespace:ModernWpf。
+# 缺 DLL 时优雅回退到自带皮肤,不影响功能(仅观感降级)。
+try {
+    $mwCandidates = @(
+        (Join-Path (Split-Path $PSCommandPath -Parent) 'lib'),
+        (Join-Path (Split-Path (Split-Path $PSCommandPath -Parent) -Parent) 'lib')
+    )
+    $mwLibDir = $mwCandidates | Where-Object { Test-Path (Join-Path $_ 'ModernWpf.dll') } | Select-Object -First 1
+    foreach ($mwDll in @('ModernWpf.Controls.dll', 'ModernWpf.dll')) {
+        if ($mwLibDir) {
+            $mwPath = Join-Path $mwLibDir $mwDll
+            if (Test-Path $mwPath) { [void][System.Reflection.Assembly]::LoadFrom($mwPath) }
+        }
+    }
+    $sync.ModernWpfLoaded = ('ModernWpf.ThemeResources' -as [type]) -ne $null
+} catch {
+    $sync.ModernWpfLoaded = $false
+    Write-Warning "ModernWpf 加载失败,回退自带皮肤: $($_.Exception.Message)"
+}
 
 function Remove-WinUtilTempScript {
     <#

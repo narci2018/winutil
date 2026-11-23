@@ -155,6 +155,17 @@ function Invoke-WPFButtonAction {
     }
 
     # Fallback to hard-coded switch for buttons not in feature.json
+    # Round 13: the Uninstall Applications tab owns a group of prefix-matched
+    # controls; route them before the generic wildcards below.
+    if ($Button -like 'WPFUninst*') {
+        Invoke-WinUtilUninstallButton -Button $Button
+        return
+    }
+    # Round 14: the Change MAC Address tab likewise owns the WPFMac* prefix.
+    if ($Button -like 'WPFMac*') {
+        Invoke-WinUtilMacButton -Button $Button
+        return
+    }
     Switch -Wildcard ($Button) {
         "WPFTab?BT" {Invoke-WPFTab $Button}
         "WPFInstall" {Invoke-WPFInstall}

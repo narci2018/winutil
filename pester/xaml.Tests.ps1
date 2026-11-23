@@ -308,7 +308,9 @@ Describe "XAML document" {
             "WPFTab3:Config",
             "WPFTab4:Updates",
             "WPFTab5:Win11ISO",
-            "WPFTab6:AppX"
+            "WPFTab6:AppX",
+            "WPFTab7:Uninstall Applications",
+            "WPFTab8:Change MAC Address"
         )
 
         if (@($actualTabs).Count -ne $expectedTabs.Count) {

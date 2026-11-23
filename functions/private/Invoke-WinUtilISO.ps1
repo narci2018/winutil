@@ -1,4 +1,4 @@
-function Invoke-WinUtilRobocopy {
+﻿function Invoke-WinUtilRobocopy {
     <#
         .SYNOPSIS
             Runs robocopy and fails the job when files were not copied
@@ -203,7 +203,7 @@ function Invoke-WinUtilISOMountAndVerify {
             $sync["WPFWin11ISOModifyButton"].IsEnabled = $false
             $sync["WPFWin11ISOVerifyResultPanel"].Visibility = "Collapsed"
         }
-        Set-WinUtilISOStep -Step "Working" -Label "Mounting and verifying the ISO"
+        Set-WinUtilISOStep -Step "Working" -Label (Get-WinUtilText "Mounting and verifying the ISO")
 
         $verified = $false
         $mountedByThisRun = $false
@@ -563,7 +563,7 @@ function Invoke-WinUtilISOCleanAndReset {
         param($workDir)
 
         Invoke-WPFUIThread -ScriptBlock { $sync["WPFWin11ISOCleanResetButton"].IsEnabled = $false }
-        Set-WinUtilISOStep -Step "Working" -Label "Starting over" -Reverse
+        Set-WinUtilISOStep -Step "Working" -Label (Get-WinUtilText "Starting over") -Reverse
 
         try {
             if ($workDir) {
@@ -684,7 +684,7 @@ function Invoke-WinUtilISOExport {
         param($contentsDir, $outputISO)
 
         Invoke-WPFUIThread -ScriptBlock { $sync["WPFWin11ISOChooseISOButton"].IsEnabled = $false }
-        Set-WinUtilISOStep -Step "Working" -Label "Building the ISO file"
+        Set-WinUtilISOStep -Step "Working" -Label (Get-WinUtilText "Building the ISO file")
 
         try {
             $oscdimg = Get-WinUtilOscdimgPath

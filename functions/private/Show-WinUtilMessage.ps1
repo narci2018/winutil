@@ -1,4 +1,4 @@
-function Show-WinUtilMessage {
+﻿function Show-WinUtilMessage {
     <#
     .SYNOPSIS
         Shows a WinUtil message box and returns the selected result.
@@ -18,7 +18,13 @@ function Show-WinUtilMessage {
         $Icon = "Information"
     )
 
-    Write-WinUtilLog -Component "Dialog" -Message "$Title : $($Message -replace '\r?\n', ' ')"
+    # i18n: translate the dialog texts; log keeps the English original for greppability
+    $logTitle = $Title
+    $logMessage = $Message
+    $Title = Get-WinUtilText $Title
+    $Message = Get-WinUtilText $Message
+
+    Write-WinUtilLog -Component "Dialog" -Message "$logTitle : $($logMessage -replace '\r?\n', ' ')"
 
     if (-not (Test-WinUtilUIAlive)) {
         # Anything with a choice is answered with the one that does not go ahead, so a prompt

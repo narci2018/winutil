@@ -1,4 +1,4 @@
-function Invoke-WinUtilISORefreshUSBDrives {
+﻿function Invoke-WinUtilISORefreshUSBDrives {
     $combo    = $sync["WPFWin11ISOUSBDriveComboBox"]
     $removable = @(Get-Disk | Where-Object { $_.BusType -eq "USB" } | Sort-Object Number)
 
@@ -87,7 +87,7 @@ function Invoke-WinUtilISOWriteUSB {
         param($DiskNumber, $contentsDir)
 
         Invoke-WPFUIThread -ScriptBlock { $sync["WPFWin11ISOWriteUSBButton"].IsEnabled = $false }
-        Set-WinUtilISOStep -Step "Working" -Label "Writing the USB drive"
+        Set-WinUtilISOStep -Step "Working" -Label (Get-WinUtilText "Writing the USB drive")
 
         try {
             Write-WinUtilISOLog "Starting USB write to Disk $DiskNumber..."
@@ -237,7 +237,7 @@ function Invoke-WinUtilISOWriteUSB {
             Invoke-WPFUIThread -Parameters @{ DiskNumber = $DiskNumber } -ScriptBlock {
                 param($DiskNumber)
 
-                $sync["WPFWin11ISODoneLabel"].Text = "Disk $DiskNumber is ready to boot from."
+                $sync["WPFWin11ISODoneLabel"].Text = (Get-WinUtilText "Disk {0} is ready to boot from.") -f $DiskNumber
                 $sync["WPFWin11ISODonePanel"].Visibility = "Visible"
             }
             Set-WinUtilISOStep -Step "Output"

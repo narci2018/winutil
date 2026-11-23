@@ -1,4 +1,4 @@
-function Step-WinUtilJob {
+﻿function Step-WinUtilJob {
     <#
         .SYNOPSIS
             Advances a job to its next reportable point, honouring a pause or stop on the way
@@ -39,6 +39,10 @@ function Step-WinUtilJob {
         [string]$Overlay,
         [switch]$Hide
     )
+
+    # i18n: translate the status here so all 40+ call sites get it for free; dynamic
+    # tails ("$program (1/5)") are preserved by the prefix match in Get-WinUtilStatusText
+    if ($Status) { $Status = Get-WinUtilStatusText $Status }
 
     # With no window every update is thrown away, and a window closed over running work counts
     # as none: its dispatcher accepts posts and discards them. The console is what is left.

@@ -1,4 +1,4 @@
-function Reset-WPFCheckBoxes {
+﻿function Reset-WPFCheckBoxes {
     <#
 
     .SYNOPSIS
@@ -32,6 +32,11 @@ function Reset-WPFCheckBoxes {
     }
     foreach ($syncEntry in $syncEntries) {
         $checkBox = $syncEntry.Value
+        # Round 14: the Change MAC Address tab has three options (restart on apply,
+        # keep the new MAC, 02 as the first octet). They are UI options with their own
+        # defaults, not entries of the install/tweak selection sets, so the reset
+        # must leave them alone - the same exemption the WPFToggle prefix gets.
+        if ($syncEntry.Key -like 'WPFMac*') { continue }
         if ($checkBox -is [System.Windows.Controls.CheckBox] -and -not $syncEntry.Key.StartsWith("WPFToggle") -and ($checkboxfilterpattern -eq "**" -or $syncEntry.Key -like $checkboxfilterpattern)) {
             # Assigning the state a box already has is not free for the hundreds of boxes the
             # Install tab adds, so only the ones that differ are touched
@@ -46,7 +51,7 @@ function Reset-WPFCheckBoxes {
     # whichever tab is built first: offline starts on Tweaks, so they are not there yet.
     if ($sync.selectedAppsstackPanel) {
         $count = $sync.SelectedApps.Count
-        $sync.WPFselectedAppsButton.Content = "Selected Apps: $count"
+        $sync.WPFselectedAppsButton.Content = (Get-WinUtilText "Selected Apps: ") + "$count"
         # On every change, remove all entries inside the Popup Menu. This is done, so we can keep the alphabetical order even if elements are selected in a random way
         $sync.selectedAppsstackPanel.Children.Clear()
         $sync.selectedApps | Foreach-Object { Add-SelectedAppsMenuItem -name $($sync.configs.applicationsHashtable.$_.Content) -key $_ }

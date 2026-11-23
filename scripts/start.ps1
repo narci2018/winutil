@@ -1,4 +1,4 @@
-<#
+﻿<#
 .NOTES
     Author         : Chris Titus @christitustech
     Runspace Author: @DeveloperDurp
@@ -128,6 +128,44 @@ function Test-WinUtilOwnsFileProcess {
 # that process's exit code. An invoked or in-memory script must return without closing its caller.
 $script:WinUtilIsFileProcess = Test-WinUtilOwnsFileProcess
 
+# ---- Modern UX: keep the console window out of sight for GUI launches ----
+# Double-clicking WinUtil.exe or winutil.ps1 used to leave a black terminal on screen for the
+# whole session. The GUI logs to file, so a visible console adds nothing. Only hide when this
+# process was NOT started from an interactive shell (explorer/launcher parent), otherwise we
+# would hide the user's own terminal window. Headless -Config/-Preset jobs keep their console
+# semantics and are skipped.
+if (-not $Config -and -not $Preset) {
+    $alreadyHidden = $false
+    $cmdlineArgs = [Environment]::GetCommandLineArgs()
+    for ($ci = 0; $ci -lt $cmdlineArgs.Count - 1; $ci++) {
+        if ($cmdlineArgs[$ci] -match '^-w(indowstyle)?$' -and $cmdlineArgs[$ci + 1] -ieq 'hidden') { $alreadyHidden = $true; break }
+    }
+    if (-not $alreadyHidden) {
+        $parentIsShell = $false
+        try {
+            $me = Get-CimInstance Win32_Process -Filter "ProcessId=$PID" -ErrorAction Stop
+            $parent = Get-Process -Id $me.ParentProcessId -ErrorAction Stop
+            if ($parent.ProcessName -in @('powershell', 'pwsh', 'cmd', 'wt', 'WindowsTerminal', 'conhost', 'bash', 'wsl', 'Code')) {
+                $parentIsShell = $true
+            }
+        } catch { $parentIsShell = $true }  # undetectable: keep the console rather than hide a user's terminal
+        if (-not $parentIsShell) {
+            try {
+                if (-not ('WinUtil.ConsoleVisibility' -as [type])) {
+                    Add-Type -Namespace WinUtil -Name ConsoleVisibility -MemberDefinition @'
+[DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
+[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+'@
+                }
+                $consoleHandle = [WinUtil.ConsoleVisibility]::GetConsoleWindow()
+                if ($consoleHandle -ne [IntPtr]::Zero) {
+                    [void][WinUtil.ConsoleVisibility]::ShowWindow($consoleHandle, 0)
+                }
+            } catch { }
+        }
+    }
+}
+
 $PARAM_OFFLINE = $false
 if ($Offline) {
     $PARAM_OFFLINE = $true
@@ -198,7 +236,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
         # waiting on this process would read that as a successful run
         try {
             $elevationCommand = New-WinUtilElevationCommand -ScriptPath $PSCommandPath -Parameters $elevationParameters -Headless
-            $elevated = Start-Process $powershellCmd -ArgumentList @("-ExecutionPolicy", "Bypass", "-NoProfile", "-EncodedCommand", $elevationCommand) -Verb RunAs -Wait -PassThru -ErrorAction Stop
+            $elevated = Start-Process $powershellCmd -ArgumentList @("-ExecutionPolicy", "Bypass", "-NoProfile", "-WindowStyle", "Hidden", "-EncodedCommand", $elevationCommand) -Verb RunAs -Wait -PassThru -ErrorAction Stop
         } catch {
             Write-Host "Elevation was declined or failed: $($_.Exception.Message)" -ForegroundColor Red
             $global:LASTEXITCODE = 1
@@ -210,14 +248,14 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
         return $elevated.ExitCode
     }
 
-    $processCmd = if (Get-Command wt.exe -ErrorAction SilentlyContinue) { "wt.exe" } else { "$powershellCmd" }
+    # GUI launch: relaunch elevated with the console hidden. wt.exe is deliberately NOT used
+    # here - a Windows Terminal tab is always visible and cannot be hidden, which defeats the
+    # "no terminal window" UX. -WindowStyle Hidden keeps the elevated process console-less
+    # from the first frame; start.ps1 also self-hides as a fallback for hosts that ignore it.
     $elevationCommand = New-WinUtilElevationCommand -ScriptPath $PSCommandPath -Parameters $elevationParameters
+    Start-Process $powershellCmd -ArgumentList @("-ExecutionPolicy", "Bypass", "-NoProfile", "-WindowStyle", "Hidden", "-EncodedCommand", $elevationCommand) -Verb RunAs
 
-    if ($processCmd -eq "wt.exe") {
-        Start-Process $processCmd -ArgumentList "$powershellCmd -ExecutionPolicy Bypass -NoProfile -EncodedCommand $elevationCommand" -Verb RunAs
-    } else {
-        Start-Process $processCmd -ArgumentList @("-ExecutionPolicy", "Bypass", "-NoProfile", "-EncodedCommand", $elevationCommand) -Verb RunAs
-    }
+
 
     break
 }
