@@ -19,14 +19,21 @@
         through Invoke-WPFUIThread, and the file picker is opened on the interface thread.
 #>
 
+# These constants live on $sync, NOT in $script: variables. The interface and every worker run in
+# separate runspaces built from New-WinUtilSessionState, which transfers the shared $sync hashtable
+# and the function definitions but NOT top-level $script: variables. A $script: constant assigned
+# here would be $null in the UI runspace (empty config preview) and in job workers (broken download
+# / activation). $sync is shared by reference across all runspaces, so the values survive. This is
+# the same pattern the Uninstall and MAC tabs use.
+
 # The one authoritative MAS source. Anything else is a look-alike and must never be executed.
-$script:MasRepoBase = 'https://raw.githubusercontent.com/massgravel/Microsoft-Activation-Scripts/master'
-$script:MasSeparateDir = 'MAS/Separate-Files-Version'
-$script:MasActivatorsDir = 'Activators'
+$sync.MasRepoBase = 'https://raw.githubusercontent.com/massgravel/Microsoft-Activation-Scripts/master'
+$sync.MasSeparateDir = 'MAS/Separate-Files-Version'
+$sync.MasActivatorsDir = 'Activators'
 
 # MAS script file names (verified against the repository tree on 2026-11-23).
 # Check_Activation_Status.cmd lives at the tree root; the four activators live under Activators/.
-$script:MasScriptFiles = @{
+$sync.MasScriptFiles = @{
     HWID    = 'Activators/HWID_Activation.cmd'
     Ohook   = 'Activators/Ohook_Activation_AIO.cmd'
     KMS     = 'Activators/Online_KMS_Activation.cmd'
@@ -35,7 +42,7 @@ $script:MasScriptFiles = @{
 
 # Product -> ODT Product ID and matching Channel. A retail product must stay on its own channel.
 # Office 2019/2016 are intentionally absent: their CDN builds are no longer reliably served.
-$script:OfficeProducts = @{
+$sync.OfficeProducts = @{
     'Microsoft 365' = @{ ProductId = 'O365ProPlusRetail'; Channel = 'Current' }
     'Office 2024'   = @{ ProductId = 'ProPlus2024Retail'; Channel = 'PerpetualVL2024' }
     'Office 2021'   = @{ ProductId = 'ProPlus2021Retail'; Channel = 'PerpetualVL2021' }
@@ -43,7 +50,7 @@ $script:OfficeProducts = @{
 
 # Built-in ODT applications that map directly to an <ExcludeApp> ID. Visio/Project are separate
 # products and are handled by adding their own <Product> element when selected.
-$script:OfficeBuiltInApps = @{
+$sync.OfficeBuiltInApps = @{
     WPFOfficeAppWord       = 'Word'
     WPFOfficeAppExcel      = 'Excel'
     WPFOfficeAppPowerPoint = 'PowerPoint'
@@ -54,14 +61,18 @@ $script:OfficeBuiltInApps = @{
 
 # The ODT engine itself. This is a stable, version-independent path (verified 200, PE/MZ,
 # ~4.4 MB on 2026-11-23) and is the deployment engine, not the old ODTSetup.exe bootstrapper.
-$script:OdtEngineUrl = 'https://officecdn.microsoft.com/pr/492350f6-3a01-4f97-b9c0-c7c6ddf67d60/Office/Data/setup.exe'
+$sync.OdtEngineUrl = 'https://officecdn.microsoft.com/pr/492350f6-3a01-4f97-b9c0-c7c6ddf67d60/Office/Data/setup.exe'
 
 function Initialize-WinUtilOfficeTab {
     if ($sync.OfficeTabWired) { return }
-    $sync.OfficeTabWired = $true
     $sync.OfficeConfigXml = ''
     $sync.OfficeOdtPath = ''
 
+    # The wired flag is set only after a full successful pass. Initialize-WinUtilTabContent
+    # resets its own InitializedTabs guard on failure so the tab can rebuild; if this inner
+    # flag were set up front, a first-pass exception would leave the tab half-built forever
+    # (every later call short-circuits here). Setting it at the end keeps the two guards honest.
+    try {
     $sync['WPFOfficeProduct'].ItemsSource = @('Microsoft 365', 'Office 2024', 'Office 2021')
     $sync['WPFOfficeProduct'].SelectedIndex = 0
 
@@ -88,8 +99,17 @@ function Initialize-WinUtilOfficeTab {
 
     # Buttons route through Invoke-WPFButtonAction -> Invoke-WinUtilOfficeButton.
 
+    Write-WinUtilLog -Level 'DEBUG' -Component 'Office' -Message 'office init: combos and checkboxes assigned'
     Invoke-WinUtilOfficeRefreshConfigPreview
+    Write-WinUtilLog -Level 'DEBUG' -Component 'Office' -Message ("office init: config preview len=" + $sync.OfficeConfigXml.Length)
     Invoke-WinUtilOfficeRefreshActivationStatus
+    $sync.OfficeTabWired = $true
+    Write-WinUtilLog -Level 'DEBUG' -Component 'Office' -Message 'office init: complete'
+    } catch {
+        Write-WinUtilLog -Level 'ERROR' -Component 'Office' -Message ("office init FAILED: " + $_.Exception.Message)
+        Write-WinUtilLog -Level 'DEBUG' -Component 'Office' -Message ("office init at: " + $_.InvocationInfo.PositionMessage)
+        throw
+    }
 }
 
 # Build a configuration.xml in the schema Microsoft ODT actually accepts:
@@ -106,15 +126,15 @@ function New-WinUtilOfficeConfigurationXml {
         [switch]$Project
     )
 
-    $meta = $script:OfficeProducts[$Product]
-    if (-not $meta) { $meta = $script:OfficeProducts['Microsoft 365'] }
+    $meta = $sync.OfficeProducts[$Product]
+    if (-not $meta) { $meta = $sync.OfficeProducts['Microsoft 365'] }
     $edition = if ($Arch -eq 'x86') { '32' } else { '64' }
 
     $lines = @('<Configuration>')
     $lines += "  <Add OfficeClientEdition=`"$edition`" Channel=`"$($meta.Channel)`">"
     $lines += "    <Product ID=`"$($meta.ProductId)`">"
     $lines += "      <Language ID=`"$Lang`" />"
-    foreach ($app in $script:OfficeBuiltInApps.Values) {
+    foreach ($app in $sync.OfficeBuiltInApps.Values) {
         if ($BuiltInApps -notcontains $app) {
             $lines += "      <ExcludeApp ID=`"$app`" />"
         }
@@ -138,9 +158,9 @@ function New-WinUtilOfficeConfigurationXml {
 
 function Get-WinUtilOfficeUiSelection {
     $builtIn = @()
-    foreach ($key in $script:OfficeBuiltInApps.Keys) {
+    foreach ($key in $sync.OfficeBuiltInApps.Keys) {
         $cb = $sync[$key]
-        if ($cb -and $cb.IsChecked) { $builtIn += $script:OfficeBuiltInApps[$key] }
+        if ($cb -and $cb.IsChecked) { $builtIn += $sync.OfficeBuiltInApps[$key] }
     }
     $visio = [bool]($sync['WPFOfficeAppVisio'] -and $sync['WPFOfficeAppVisio'].IsChecked)
     $project = [bool]($sync['WPFOfficeAppProject'] -and $sync['WPFOfficeAppProject'].IsChecked)
@@ -175,7 +195,7 @@ function Get-WinUtilOfficeOdtEngine {
     Step-WinUtilJob -Status 'Downloading the Office Deployment Tool...' -Percent 20
     try {
         $ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
-        Invoke-WebRequest -Uri $script:OdtEngineUrl -UseBasicParsing -Headers @{ 'User-Agent' = $ua } -OutFile $dest -TimeoutSec 180
+        Invoke-WebRequest -Uri $sync.OdtEngineUrl -UseBasicParsing -Headers @{ 'User-Agent' = $ua } -OutFile $dest -TimeoutSec 180
         $item = Get-Item $dest -ErrorAction Stop
         $fs = [System.IO.File]::OpenRead($dest)
         try {
@@ -345,11 +365,11 @@ function Get-WinUtilMasWorkDir {
     $workDir = Join-Path $env:TEMP 'winutil-mas'
     if (-not (Test-Path $workDir)) { New-Item -ItemType Directory -Path $workDir -Force | Out-Null }
 
-    $relPaths = @($script:MasScriptFiles.Values) + @('Check_Activation_Status.cmd')
+    $relPaths = @($sync.MasScriptFiles.Values) + @('Check_Activation_Status.cmd')
     foreach ($rel in $relPaths) {
         $dest = Join-Path $workDir (Split-Path $rel -Leaf)
         if (Test-Path $dest) { continue }
-        $url = "$script:MasRepoBase/$script:MasSeparateDir/$rel"
+        $url = "$($sync.MasRepoBase)/$($sync.MasSeparateDir)/$rel"
         try {
             Invoke-WebRequest -Uri $url -UseBasicParsing -Headers @{ 'User-Agent' = 'Mozilla/5.0' } -OutFile $dest -TimeoutSec 90
             if (-not (Test-Path $dest) -or (Get-Item $dest).Length -lt 1000) {
@@ -393,15 +413,15 @@ function Start-WinUtilActivation {
         $status = ''
         if ($Target -eq 'Windows') {
             switch ($Method) {
-                'HWID'        { $scriptRel = $script:MasScriptFiles.HWID; $switch = '/HWID'; $status = 'Activating Windows via HWID...' }
-                'Online KMS'  { $scriptRel = $script:MasScriptFiles.KMS; $switch = '/K-Windows'; $status = 'Activating Windows via KMS...' }
-                'TSforge'     { $scriptRel = $script:MasScriptFiles.TSforge; $switch = '/Z-Windows'; $status = 'Activating Windows via TSforge...' }
+                'HWID'        { $scriptRel = $sync.MasScriptFiles.HWID; $switch = '/HWID'; $status = 'Activating Windows via HWID...' }
+                'Online KMS'  { $scriptRel = $sync.MasScriptFiles.KMS; $switch = '/K-Windows'; $status = 'Activating Windows via KMS...' }
+                'TSforge'     { $scriptRel = $sync.MasScriptFiles.TSforge; $switch = '/Z-Windows'; $status = 'Activating Windows via TSforge...' }
             }
         } else {
             if ($Method -eq 'Ohook') {
-                $scriptRel = $script:MasScriptFiles.Ohook; $switch = '/Ohook'; $status = 'Activating Office via Ohook...'
+                $scriptRel = $sync.MasScriptFiles.Ohook; $switch = '/Ohook'; $status = 'Activating Office via Ohook...'
             } else {
-                $scriptRel = $script:MasScriptFiles.KMS; $switch = '/K-Office'; $status = 'Activating Office via KMS...'
+                $scriptRel = $sync.MasScriptFiles.KMS; $switch = '/K-Office'; $status = 'Activating Office via KMS...'
             }
         }
         if (-not $scriptRel) {
@@ -441,10 +461,10 @@ function Start-WinUtilUnactivate {
         $ran = $false
         $jobs = @()
         if ($WinMethod -eq 'Online KMS') {
-            $jobs += @{ Script = $script:MasScriptFiles.KMS; Switch = '/K-Uninstall' }
+            $jobs += @{ Script = $sync.MasScriptFiles.KMS; Switch = '/K-Uninstall' }
         }
         if ($OffMethod -eq 'Ohook') {
-            $jobs += @{ Script = $script:MasScriptFiles.Ohook; Switch = '/Ohook-Uninstall' }
+            $jobs += @{ Script = $sync.MasScriptFiles.Ohook; Switch = '/Ohook-Uninstall' }
         }
         # HWID has no uninstall switch (it writes a hardware-bound digital license); TSforge
         # likewise has no /Z-Uninstall. Those states are intentionally left unchanged.

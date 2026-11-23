@@ -37,6 +37,10 @@
         # defaults, not entries of the install/tweak selection sets, so the reset
         # must leave them alone - the same exemption the WPFToggle prefix gets.
         if ($syncEntry.Key -like 'WPFMac*') { continue }
+        # Round 15: the Office app checkboxes (Word/Excel/... Visio/Project) are UI options
+        # choosing which apps to deploy, not entries of the install/tweak selection sets.
+        # Without this exemption the reset right after tab init unchecks them all.
+        if ($syncEntry.Key -like 'WPFOfficeApp*') { continue }
         if ($checkBox -is [System.Windows.Controls.CheckBox] -and -not $syncEntry.Key.StartsWith("WPFToggle") -and ($checkboxfilterpattern -eq "**" -or $syncEntry.Key -like $checkboxfilterpattern)) {
             # Assigning the state a box already has is not free for the hundreds of boxes the
             # Install tab adds, so only the ones that differ are touched
