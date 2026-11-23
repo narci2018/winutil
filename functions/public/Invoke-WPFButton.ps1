@@ -166,6 +166,11 @@ function Invoke-WPFButtonAction {
         Invoke-WinUtilMacButton -Button $Button
         return
     }
+    # Round 15: the Office Deployment tab owns the WPFOffice*/WPFActivate*/WPFUnactivate* buttons.
+    if ($Button -like 'WPFOffice*' -or $Button -like 'WPFActivate*' -or $Button -eq 'WPFUnactivate') {
+        Invoke-WinUtilOfficeButton -Button $Button
+        return
+    }
     Switch -Wildcard ($Button) {
         "WPFTab?BT" {Invoke-WPFTab $Button}
         "WPFInstall" {Invoke-WPFInstall}

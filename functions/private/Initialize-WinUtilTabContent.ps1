@@ -46,6 +46,9 @@ function Initialize-WinUtilTabContent {
             "Change MAC Address" {
                 Initialize-WinUtilMacTab
             }
+            "Office Deployment" {
+                Initialize-WinUtilOfficeTab
+            }
             "Win11ISO" {
                 if (Test-WinUtilUIAlive) {
                     $sync.Form.Dispatcher.BeginInvoke([System.Windows.Threading.DispatcherPriority]::Background, [action]{ Invoke-WinUtilISOCheckExistingWork }) | Out-Null

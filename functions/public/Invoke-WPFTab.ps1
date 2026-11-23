@@ -37,7 +37,7 @@
         # currentTab is the canonical tab key, never the localized Header: the render queue,
         # deferral checks and search filters compare it against "Install"/"Tweaks"/"AppX"
         # literals, and tab content is rebuilt through Initialize-WinUtilTabContent's switch.
-        $tabKeyByIndex = @("Install", "Tweaks", "Config", "Updates", "Win11ISO", "AppX", "Uninstall Applications", "Change MAC Address")
+        $tabKeyByIndex = @("Install", "Tweaks", "Config", "Updates", "Win11ISO", "AppX", "Uninstall Applications", "Change MAC Address", "Office Deployment")
         $sync.currentTab = $tabKeyByIndex[$tabNumber]
     }
 

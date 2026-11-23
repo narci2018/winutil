@@ -962,6 +962,7 @@ namespace WinUtil {
                         $flag = Join-Path $env:TEMP 'winutil-e2e-navclick.flag'
                         $uninstFlag = Join-Path $env:TEMP 'winutil-e2e-uninstall.flag'
                         $macFlag = Join-Path $env:TEMP 'winutil-e2e-mac.flag'
+                        $officeFlag = Join-Path $env:TEMP 'winutil-e2e-office.flag'
                         # Round 13: one capture timer for both opt-in e2e modes. The Uninstall
                         # tab is delayed longer (its 468-item scan runs in a worker) and gets a
                         # second same-process capture after switching to the Startup view.
@@ -970,13 +971,14 @@ namespace WinUtil {
                         $e2eTab = $null
                         if (Test-Path $uninstFlag) { $e2eTab = 'WPFTab7' }
                         elseif (Test-Path $macFlag) { $e2eTab = 'WPFTab8' }
+                        elseif (Test-Path $officeFlag) { $e2eTab = 'WPFTab9' }
                         elseif (Test-Path $flag) { $e2eTab = 'WPFTab2' }
                         if ($e2eTab) {
                             Invoke-WPFTab $e2eTab
-                            $e2eLabel = if ($e2eTab -eq 'WPFTab7') { 'uninstall tab e2e' } elseif ($e2eTab -eq 'WPFTab8') { 'mac tab e2e' } else { 'tweaks view e2e' }
+                            $e2eLabel = if ($e2eTab -eq 'WPFTab7') { 'uninstall tab e2e' } elseif ($e2eTab -eq 'WPFTab8') { 'mac tab e2e' } elseif ($e2eTab -eq 'WPFTab9') { 'office tab e2e' } else { 'tweaks view e2e' }
                             Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message ("$e2eLabel : switched to $e2eTab; currentTab=[$($sync.currentTab)]")
                             $ft = New-Object System.Windows.Threading.DispatcherTimer
-                            $ft.Interval = [TimeSpan]::FromSeconds($(if ($e2eTab -eq 'WPFTab7') { 6 } elseif ($e2eTab -eq 'WPFTab8') { 4 } else { 4 }))
+                            $ft.Interval = [TimeSpan]::FromSeconds($(if ($e2eTab -eq 'WPFTab7') { 6 } elseif ($e2eTab -eq 'WPFTab8' -or $e2eTab -eq 'WPFTab9') { 4 } else { 4 }))
                             $ft.Add_Tick({
                                     param($s2)
                                     $s2.Stop()
@@ -1045,6 +1047,21 @@ namespace WinUtil {
                                                 $mft2.Start()
                                             }
                                         } catch { Write-WinUtilLog -Level "WARN" -Component "UI" -Message ("mac tab probe failed: " + $_.Exception.Message) }
+                                        # Round 15: Office Deployment tab probe (log only, read-only -
+                                        # never deploys Office nor touches any activation state).
+                                        try {
+                                            if ($sync.currentTab -eq 'Office Deployment') {
+                                                $pp = if ($sync.ContainsKey('WPFOfficeProduct')) { $sync['WPFOfficeProduct'] } else { $null }
+                                                $pv = if ($sync.ContainsKey('WPFOfficeConfigPreview')) { $sync['WPFOfficeConfigPreview'].Text } else { '' }
+                                                $ws = if ($sync.ContainsKey('WPFOfficeWinStatus')) { $sync['WPFOfficeWinStatus'].Text } else { '' }
+                                                $os = if ($sync.ContainsKey('WPFOfficeOffStatus')) { $sync['WPFOfficeOffStatus'].Text } else { '' }
+                                                $prodCount = if ($pp) { @($pp.ItemsSource).Count } else { -1 }
+                                                $selProd = if ($pp -and $pp.SelectedItem) { $pp.SelectedItem } else { 'none' }
+                                                $hasSchema = if ($pv -match 'OfficeClientEdition' -and $pv -match '<Display') { $true } else { $false }
+                                                $hasExclude = if ($pv -match 'ExcludeApp') { $true } else { $false }
+                                                Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message ("office tab probe: currentTab=[$($sync.currentTab)] products=$prodCount selected=[$selProd] schemaOk=[$hasSchema] excludeApp=[$hasExclude] winStatus=[$ws] offStatus=[$os] previewLen=$($pv.Length)")
+                                            }
+                                        } catch { Write-WinUtilLog -Level "WARN" -Component "UI" -Message ("office tab probe failed: " + $_.Exception.Message) }
                                         # Round 13: switch to the Startup view and take a second
                                         # same-process image once layout has settled. Both views
                                         # then have pixel evidence from the real shown window.

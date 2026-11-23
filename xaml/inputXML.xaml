@@ -1931,6 +1931,11 @@
                                 <mwi:FontIcon Glyph="&#xE8B7;"/>
                             </mwc:NavigationViewItem.Icon>
                         </mwc:NavigationViewItem>
+                        <mwc:NavigationViewItem Content="Office Deployment" Tag="WPFTab9">
+                            <mwc:NavigationViewItem.Icon>
+                                <mwi:FontIcon Glyph="&#xE8C5;"/>
+                            </mwc:NavigationViewItem.Icon>
+                        </mwc:NavigationViewItem>
                     </mwc:NavigationView.MenuItems>
         <TabControl Name="WPFTabNav" Background="Transparent" Width="Auto" Height="Auto" BorderBrush="Transparent" BorderThickness="0" Padding="-1">
             <TabItem Header="Install" Visibility="Collapsed" Name="WPFTab1">
@@ -3255,6 +3260,125 @@
 
                     <Border Grid.Row="2" Background="Transparent" Padding="10,2,10,6">
                         <TextBlock Name="WPFMacStatus" Text="Select an adapter. Changing a MAC address restarts the connection and is confirmed first."
+                                   TextWrapping="Wrap" Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                    </Border>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Office Deployment" Visibility="Collapsed" Name="WPFTab9">
+                <Grid Background="Transparent">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Office deployment (phase 2): generate ODT configuration.xml and deploy -->
+                    <Border Grid.Row="0" Background="{DynamicResource FluentPopupBg}" BorderBrush="{DynamicResource FluentFieldBorder}"
+                            BorderThickness="1" CornerRadius="8" Padding="12" Margin="10,8,10,4">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="Office Deployment" FontWeight="SemiBold" Margin="0,0,0,10"
+                                       Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource FontSize}"/>
+
+                            <TextBlock Text="Product" FontWeight="SemiBold" Margin="0,0,0,4"
+                                       Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            <ComboBox Name="WPFOfficeProduct" Height="{DynamicResource SearchBarHeight}" Padding="8,3"
+                                      VerticalContentAlignment="Center"
+                                      Background="{DynamicResource FluentFieldBg}"
+                                      Foreground="{DynamicResource MainForegroundColor}"
+                                      BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1"/>
+
+                            <TextBlock Text="Architecture" FontWeight="SemiBold" Margin="0,10,0,4"
+                                       Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            <ComboBox Name="WPFOfficeArch" Height="{DynamicResource SearchBarHeight}" Padding="8,3"
+                                      VerticalContentAlignment="Center"
+                                      Background="{DynamicResource FluentFieldBg}"
+                                      Foreground="{DynamicResource MainForegroundColor}"
+                                      BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1"/>
+
+                            <TextBlock Text="Language" FontWeight="SemiBold" Margin="0,10,0,4"
+                                       Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            <ComboBox Name="WPFOfficeLang" Height="{DynamicResource SearchBarHeight}" Padding="8,3"
+                                      VerticalContentAlignment="Center"
+                                      Background="{DynamicResource FluentFieldBg}"
+                                      Foreground="{DynamicResource MainForegroundColor}"
+                                      BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1"/>
+
+                            <TextBlock Text="Applications" FontWeight="SemiBold" Margin="0,10,0,6"
+                                       Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            <WrapPanel Name="WPFOfficeAppsPanel">
+                                <CheckBox Name="WPFOfficeAppWord" Content="Word" Margin="0,0,12,6"
+                                          Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                                <CheckBox Name="WPFOfficeAppExcel" Content="Excel" Margin="0,0,12,6"
+                                          Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                                <CheckBox Name="WPFOfficeAppPowerPoint" Content="PowerPoint" Margin="0,0,12,6"
+                                          Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                                <CheckBox Name="WPFOfficeAppAccess" Content="Access" Margin="0,0,12,6"
+                                          Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                                <CheckBox Name="WPFOfficeAppPublisher" Content="Publisher" Margin="0,0,12,6"
+                                          Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                                <CheckBox Name="WPFOfficeAppTeams" Content="Teams" Margin="0,0,12,6"
+                                          Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                                <CheckBox Name="WPFOfficeAppVisio" Content="Visio" Margin="0,0,12,6"
+                                          Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                                <CheckBox Name="WPFOfficeAppProject" Content="Project" Margin="0,0,0,6"
+                                          Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            </WrapPanel>
+
+                            <Button Name="WPFOfficeGenConfig" Content="Generate Configuration" Margin="0,6,0,0"
+                                    Height="{DynamicResource ButtonHeight}" Padding="12,4" HorizontalAlignment="Stretch"/>
+                            <Button Name="WPFOfficeDeploy" Content="Download ODT and Deploy" Margin="0,6,0,0"
+                                    Height="{DynamicResource ButtonHeight}" Padding="12,4" HorizontalAlignment="Stretch"/>
+
+                            <TextBlock Text="Generated configuration.xml" FontWeight="SemiBold" Margin="0,12,0,4"
+                                       Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            <TextBox Name="WPFOfficeConfigPreview" IsReadOnly="True" Height="120"
+                                     TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"
+                                     Background="{DynamicResource FluentFieldBg}"
+                                     Foreground="{DynamicResource MainForegroundColor}"
+                                     BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1"
+                                     VerticalScrollBarVisibility="Auto" Padding="6"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Activation (phase 3): download official MAS scripts and run unattended -->
+                    <Border Grid.Row="1" Background="{DynamicResource FluentPopupBg}" BorderBrush="{DynamicResource FluentFieldBorder}"
+                            BorderThickness="1" CornerRadius="8" Padding="12" Margin="10,2,10,4">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="Activation" FontWeight="SemiBold" Margin="0,0,0,10"
+                                       Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource FontSize}"/>
+
+                            <TextBlock Text="Windows" FontWeight="SemiBold" Margin="0,0,0,4"
+                                       Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            <TextBlock Name="WPFOfficeWinStatus" Text="Checking Windows activation status..."
+                                       TextWrapping="Wrap" Margin="0,0,0,6"
+                                       Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            <ComboBox Name="WPFOfficeWinMethod" Height="{DynamicResource SearchBarHeight}" Padding="8,3"
+                                      VerticalContentAlignment="Center"
+                                      Background="{DynamicResource FluentFieldBg}"
+                                      Foreground="{DynamicResource MainForegroundColor}"
+                                      BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1"/>
+                            <Button Name="WPFActivateWin" Content="Activate Windows" Margin="0,6,0,10"
+                                    Height="{DynamicResource ButtonHeight}" Padding="12,4" HorizontalAlignment="Stretch"/>
+
+                            <TextBlock Text="Office" FontWeight="SemiBold" Margin="0,0,0,4"
+                                       Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            <TextBlock Name="WPFOfficeOffStatus" Text="Checking Office activation status..."
+                                       TextWrapping="Wrap" Margin="0,0,0,6"
+                                       Foreground="{DynamicResource MainForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                            <ComboBox Name="WPFOfficeOffMethod" Height="{DynamicResource SearchBarHeight}" Padding="8,3"
+                                      VerticalContentAlignment="Center"
+                                      Background="{DynamicResource FluentFieldBg}"
+                                      Foreground="{DynamicResource MainForegroundColor}"
+                                      BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1"/>
+                            <Button Name="WPFActivateOff" Content="Activate Office" Margin="0,6,0,6"
+                                    Height="{DynamicResource ButtonHeight}" Padding="12,4" HorizontalAlignment="Stretch"/>
+                            <Button Name="WPFUnactivate" Content="Uninstall Activation" Margin="0,6,0,0"
+                                    Height="{DynamicResource ButtonHeight}" Padding="12,4" HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="2" Background="Transparent" Padding="10,2,10,6">
+                        <TextBlock Name="WPFOfficeStatus" Text="Office deployment uses the official Microsoft ODT. Activation downloads the open-source MAS scripts from the official massgravel repository and runs them in unattended mode."
                                    TextWrapping="Wrap" Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
                     </Border>
                 </Grid>
