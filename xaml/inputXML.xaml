@@ -1936,6 +1936,11 @@
                                 <mwi:FontIcon Glyph="&#xE8C5;"/>
                             </mwc:NavigationViewItem.Icon>
                         </mwc:NavigationViewItem>
+                        <mwc:NavigationViewItem Content="Windows Reinstall" Tag="WPFTab10">
+                            <mwc:NavigationViewItem.Icon>
+                                <mwi:FontIcon Glyph="&#xE7BA;"/>
+                            </mwc:NavigationViewItem.Icon>
+                        </mwc:NavigationViewItem>
                     </mwc:NavigationView.MenuItems>
         <TabControl Name="WPFTabNav" Background="Transparent" Width="Auto" Height="Auto" BorderBrush="Transparent" BorderThickness="0" Padding="-1">
             <TabItem Header="Install" Visibility="Collapsed" Name="WPFTab1">
@@ -2881,6 +2886,7 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
                                 <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets"
@@ -2918,6 +2924,8 @@
                                          Effect="{x:Null}"
                                          Text="Ready. Please select a Windows 11 ISO to begin."/>
                             </Border>
+
+                            
                         </Grid>
                     </Border>
 
@@ -3380,6 +3388,65 @@
                     <Border Grid.Row="2" Background="Transparent" Padding="10,2,10,6">
                         <TextBlock Name="WPFOfficeStatus" Text="Office deployment uses the official Microsoft ODT. Activation downloads the open-source MAS scripts from the official massgravel repository and runs them in unattended mode."
                                    TextWrapping="Wrap" Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
+                    </Border>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Windows Reinstall" Visibility="Collapsed" Name="WPFTab10">
+                <Grid Background="Transparent">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Background="{DynamicResource FluentPopupBg}" BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="10,8,10,4">
+                        <StackPanel Orientation="Vertical">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource IconFontSize}" Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Windows Reinstall (DANGER: ERASES ALL DISKS)" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}" FontSize="{DynamicResource FontSize}"/>
+                            </StackPanel>
+                            <TextBlock Text="Install source (optional) - blank = auto-download the official installer" FontSize="{DynamicResource FontSize}" FontWeight="Bold" Foreground="{DynamicResource MainForegroundColor}" Margin="0,0,0,6" TextWrapping="Wrap"/>
+                            <TextBox Name="WPFReinstallIsoUrl" AutomationProperties.Name="Install source (optional) - blank = auto-download the official installer" TextWrapping="NoWrap" Margin="0,0,0,10" Background="{DynamicResource FluentFieldBg}" Foreground="{DynamicResource MainForegroundColor}" BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1"/>
+                            <TextBlock Text="Windows edition" FontSize="{DynamicResource FontSize}" FontWeight="Bold" Foreground="{DynamicResource MainForegroundColor}" Margin="0,0,0,6"/>
+                            <ComboBox Name="WPFReinstallImageName" AutomationProperties.Name="Windows edition" IsEditable="True" SelectedIndex="0" Text="Windows 11 Pro" Margin="0,0,0,10" Background="{DynamicResource FluentFieldBg}" Foreground="{DynamicResource MainForegroundColor}" BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1">
+                                <ComboBoxItem Content="Windows 11 Pro"/>
+                                <ComboBoxItem Content="Windows 11 Home"/>
+                                <ComboBoxItem Content="Windows 11 Education"/>
+                                <ComboBoxItem Content="Windows 11 Pro Education"/>
+                                <ComboBoxItem Content="Windows 11 Pro for Workstations"/>
+                                <ComboBoxItem Content="Windows 11 IoT Enterprise"/>
+                                <ComboBoxItem Content="Windows 10 Pro"/>
+                                <ComboBoxItem Content="Windows 10 Home"/>
+                                <ComboBoxItem Content="Windows 10 Education"/>
+                                <ComboBoxItem Content="Windows 10 Enterprise"/>
+                                <ComboBoxItem Content="Windows 10 Enterprise LTSC 2021"/>
+                                <ComboBoxItem Content="Windows 10 IoT Enterprise"/>
+                                <ComboBoxItem Content="Windows Server 2025 SERVERSTANDARD"/>
+                                <ComboBoxItem Content="Windows Server 2025 SERVERDATACENTER"/>
+                                <ComboBoxItem Content="Windows Server 2022 SERVERSTANDARD"/>
+                                <ComboBoxItem Content="Windows Server 2022 SERVERDATACENTER"/>
+                                <ComboBoxItem Content="Windows Server 2019 SERVERSTANDARD"/>
+                                <ComboBoxItem Content="Windows Server 2019 SERVERDATACENTER"/>
+                            </ComboBox>
+                            <TextBlock Text="Command preview (copy to CMD or PowerShell)" FontSize="{DynamicResource FontSize}" FontWeight="Bold" Foreground="{DynamicResource MainForegroundColor}" Margin="0,0,0,6"/>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,10">
+                                <Button Name="WPFReinstallCopyButton" DockPanel.Dock="Right" Content="Copy" Width="Auto" Height="32" MinWidth="70" Margin="8,0,0,0" FontSize="{DynamicResource FontSize}" Foreground="{DynamicResource MainForegroundColor}" ToolTip="Copy the command below to the clipboard so you can paste and run it yourself in CMD or PowerShell."/>
+                                <TextBox Name="WPFReinstallCommandPreview" AutomationProperties.Name="Command preview (copy to CMD or PowerShell)" IsReadOnly="True" TextWrapping="Wrap" MinHeight="32" FontFamily="Consolas" FontSize="12" Background="{DynamicResource FluentFieldBg}" Foreground="{DynamicResource MainForegroundColor}" BorderBrush="{DynamicResource FluentFieldBorder}" BorderThickness="1" Padding="6,4" VerticalContentAlignment="Center"/>
+                            </DockPanel>
+                            <CheckBox Name="WPFReinstallAckCheck" Content="I understand this ERASES ALL DISKS and cannot be undone" FontSize="{DynamicResource FontSize}" Margin="0,0,0,10"/>
+                            <TextBlock Name="WPFReinstallStatus" FontSize="{DynamicResource FontSize}" Foreground="{DynamicResource MainForegroundColor}" TextWrapping="Wrap" MinHeight="18" Margin="0,0,0,10" Text="Idle."/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Name="WPFReinstallPrepareButton" Content="Download &amp; prepare pinned scripts" Width="Auto" Height="32" MinWidth="150" Margin="0,0,8,0" FontSize="{DynamicResource FontSize}" Foreground="{DynamicResource MainForegroundColor}" ToolTip="Downloads the pinned reinstall scripts for inspection. Does not run them."/>
+                                <Button Name="WPFReinstallStartButton" Width="Auto" Height="32" MinWidth="150" Margin="0,0,8,0" FontSize="{DynamicResource FontSize}" Foreground="{DynamicResource MainForegroundColor}" ToolTip="DANGER: ERASES ALL DISKS and reboots at least twice. Requires the acknowledgement checkbox and two confirmations.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource IconFontSize}" Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Start reinstall (ERASES DISK)" Foreground="{DynamicResource SystemControlErrorTextForegroundBrush}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Name="WPFReinstallCancelButton" Content="Cancel before reboot" Width="Auto" Height="32" MinWidth="150" FontSize="{DynamicResource FontSize}" Foreground="{DynamicResource MainForegroundColor}" ToolTip="Attempts to cancel a prepared reinstall before the reboot happens. Requires confirmation."/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="1" Background="Transparent" Padding="10,2,10,6">
+                        <TextBlock Text="Windows reinstall runs the pinned bin456789/reinstall scripts in a separate process. If you leave the install source empty it automatically downloads the official Windows installer, then erases all disks, changes the boot configuration and reboots at least twice. Only use on machines you own." TextWrapping="Wrap" Foreground="{DynamicResource LabelboxForegroundColor}" FontSize="{DynamicResource ButtonFontSize}"/>
                     </Border>
                 </Grid>
             </TabItem>

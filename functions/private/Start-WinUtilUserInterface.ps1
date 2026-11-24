@@ -635,6 +635,35 @@ $(Get-WinUtilText 'Version')  : <a href="https://github.com/ChrisTitusTech/winut
         $sync["WPFWin11ISOModifySection"].IsSelected = $true
     })
 
+    # Reinstall (hidden high-risk external entry) button handlers
+    $sync["WPFReinstallPrepareButton"].Add_Click({
+        Invoke-WinUtilReinstallPrepare
+    })
+
+    $sync["WPFReinstallStartButton"].Add_Click({
+        Invoke-WinUtilReinstallStart
+    })
+
+    $sync["WPFReinstallCancelButton"].Add_Click({
+        Invoke-WinUtilReinstallCancel
+    })
+
+    # Command preview: the same builder Start uses, so the copyable command is exactly what
+    # would run. Copy only touches the clipboard and never launches anything.
+    $sync["WPFReinstallCopyButton"].Add_Click({
+        Copy-WinUtilReinstallCommand
+    })
+
+    $sync["WPFReinstallIsoUrl"].Add_TextChanged({
+        Update-WinUtilReinstallCommandPreview
+    })
+
+    $sync["WPFReinstallImageName"].Add_TextChanged({
+        Update-WinUtilReinstallCommandPreview
+    })
+
+    Update-WinUtilReinstallCommandPreview
+
     $buildClock.Stop()
     Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message "Interface built in $($buildClock.ElapsedMilliseconds) ms, showing the window."
     Write-WinUtilTimingSummary -Scope "UI" -TotalMilliseconds $buildClock.ElapsedMilliseconds
@@ -680,11 +709,11 @@ $(Get-WinUtilText 'Version')  : <a href="https://github.com/ChrisTitusTech/winut
             if ($sender -and $sender.SelectedItem) { $candidates += $sender.SelectedItem }
             $navTag = $null
             foreach ($c in $candidates) {
-                if ($c.PSObject.Properties.Name -contains 'Tag' -and $c.Tag -match '^WPFTab\d$') { $navTag = $c.Tag.ToString(); break }
+                if ($c.PSObject.Properties.Name -contains 'Tag' -and $c.Tag -match '^WPFTab\d+$') { $navTag = $c.Tag.ToString(); break }
             }
             $before = $sync.currentTab
             Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message ("nav selection: tag=[$navTag] before=[$before] selType=$(if($e -and $e.SelectedItem){$e.SelectedItem.GetType().Name}else{'null'})")
-            if ($navTag -match '^WPFTab\d$') { Invoke-WPFTab $navTag }
+            if ($navTag -match '^WPFTab\d+$') { Invoke-WPFTab $navTag }
         })
 
         # Ninth-round follow-up: item-level handlers never fired on real clicks, so the
@@ -708,7 +737,7 @@ $(Get-WinUtilText 'Version')  : <a href="https://github.com/ChrisTitusTech/winut
                 $src = $clickArgs.OriginalSource
                 while ($src) {
                     $chain.Add($src.GetType().Name)
-                    if ($src -is [Windows.Controls.Control] -and $src.Tag -and "$($src.Tag)" -match '^WPFTab\d$') {
+                    if ($src -is [Windows.Controls.Control] -and $src.Tag -and "$($src.Tag)" -match '^WPFTab\d+$') {
                         $tag = "$($src.Tag)"; break
                     }
                     $src = [Windows.Media.VisualTreeHelper]::GetParent($src)
@@ -963,6 +992,7 @@ namespace WinUtil {
                         $uninstFlag = Join-Path $env:TEMP 'winutil-e2e-uninstall.flag'
                         $macFlag = Join-Path $env:TEMP 'winutil-e2e-mac.flag'
                         $officeFlag = Join-Path $env:TEMP 'winutil-e2e-office.flag'
+                        $reinstallFlag = Join-Path $env:TEMP 'winutil-e2e-reinstall.flag'
                         # Round 13: one capture timer for both opt-in e2e modes. The Uninstall
                         # tab is delayed longer (its 468-item scan runs in a worker) and gets a
                         # second same-process capture after switching to the Startup view.
@@ -972,13 +1002,14 @@ namespace WinUtil {
                         if (Test-Path $uninstFlag) { $e2eTab = 'WPFTab7' }
                         elseif (Test-Path $macFlag) { $e2eTab = 'WPFTab8' }
                         elseif (Test-Path $officeFlag) { $e2eTab = 'WPFTab9' }
+                        elseif (Test-Path $reinstallFlag) { $e2eTab = 'WPFTab10' }
                         elseif (Test-Path $flag) { $e2eTab = 'WPFTab2' }
                         if ($e2eTab) {
                             Invoke-WPFTab $e2eTab
-                            $e2eLabel = if ($e2eTab -eq 'WPFTab7') { 'uninstall tab e2e' } elseif ($e2eTab -eq 'WPFTab8') { 'mac tab e2e' } elseif ($e2eTab -eq 'WPFTab9') { 'office tab e2e' } else { 'tweaks view e2e' }
+                            $e2eLabel = if ($e2eTab -eq 'WPFTab7') { 'uninstall tab e2e' } elseif ($e2eTab -eq 'WPFTab8') { 'mac tab e2e' } elseif ($e2eTab -eq 'WPFTab9') { 'office tab e2e' } elseif ($e2eTab -eq 'WPFTab10') { 'reinstall tab e2e' } else { 'tweaks view e2e' }
                             Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message ("$e2eLabel : switched to $e2eTab; currentTab=[$($sync.currentTab)]")
                             $ft = New-Object System.Windows.Threading.DispatcherTimer
-                            $ft.Interval = [TimeSpan]::FromSeconds($(if ($e2eTab -eq 'WPFTab7') { 6 } elseif ($e2eTab -eq 'WPFTab8' -or $e2eTab -eq 'WPFTab9') { 4 } else { 4 }))
+                            $ft.Interval = [TimeSpan]::FromSeconds($(if ($e2eTab -eq 'WPFTab7') { 6 } elseif ($e2eTab -eq 'WPFTab8' -or $e2eTab -eq 'WPFTab9' -or $e2eTab -eq 'WPFTab10') { 4 } else { 4 }))
                             $ft.Add_Tick({
                                     param($s2)
                                     $s2.Stop()
@@ -1062,6 +1093,32 @@ namespace WinUtil {
                                                 Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message ("office tab probe: currentTab=[$($sync.currentTab)] products=$prodCount selected=[$selProd] schemaOk=[$hasSchema] excludeApp=[$hasExclude] winStatus=[$ws] offStatus=[$os] previewLen=$($pv.Length)")
                                             }
                                         } catch { Write-WinUtilLog -Level "WARN" -Component "UI" -Message ("office tab probe failed: " + $_.Exception.Message) }
+                                        # Reinstall (hidden high-risk external entry) tab probe (log only, read-only -
+                                        # never clicks Prepare / Start / Cancel and never calls any reinstall worker function).
+                                        try {
+                                            if ($sync.currentTab -eq 'Windows Reinstall') {
+                                                $riso = if ($sync.ContainsKey('WPFReinstallIsoUrl')) { $sync['WPFReinstallIsoUrl'] } else { $null }
+                                                $rimg = if ($sync.ContainsKey('WPFReinstallImageName')) { $sync['WPFReinstallImageName'] } else { $null }
+                                                $rack = if ($sync.ContainsKey('WPFReinstallAckCheck')) { $sync['WPFReinstallAckCheck'] } else { $null }
+                                                $rprep = if ($sync.ContainsKey('WPFReinstallPrepareButton')) { $sync['WPFReinstallPrepareButton'] } else { $null }
+                                                $rstart = if ($sync.ContainsKey('WPFReinstallStartButton')) { $sync['WPFReinstallStartButton'] } else { $null }
+                                                $rcancel = if ($sync.ContainsKey('WPFReinstallCancelButton')) { $sync['WPFReinstallCancelButton'] } else { $null }
+                                                $rstatus = if ($sync.ContainsKey('WPFReinstallStatus')) { $sync['WPFReinstallStatus'] } else { $null }
+                                                $rpreview = if ($sync.ContainsKey('WPFReinstallCommandPreview')) { $sync['WPFReinstallCommandPreview'] } else { $null }
+                                                $rcopy = if ($sync.ContainsKey('WPFReinstallCopyButton')) { $sync['WPFReinstallCopyButton'] } else { $null }
+                                                $risoBox = if ($riso -and $rimg) { 'yes' } else { 'none' }
+                                                $rackVal = if ($rack) { $rack.IsChecked } else { 'missing' }
+                                                $rprepare = if ($rprep) { $rprep.IsEnabled } else { 'missing' }
+                                                $rstartVal = if ($rstart) { $rstart.IsEnabled } else { 'missing' }
+                                                $rcancelVal = if ($rcancel) { $rcancel.IsEnabled } else { 'missing' }
+                                                $rstatusLen = if ($rstatus) { $rstatus.Text.Length } else { -1 }
+                                                $rcombo = if ($rimg -and $rimg -is [System.Windows.Controls.ComboBox]) { "editable=$($rimg.IsEditable);index=$($rimg.SelectedIndex);items=$(@($rimg.Items).Count)" } else { 'missing' }
+                                                $rpreviewLen = if ($rpreview) { $rpreview.Text.Length } else { -1 }
+                                                $rcopyVal = if ($rcopy) { 'yes' } else { 'none' }
+                                                Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message ("reinstall tab probe: currentTab=[$($sync.currentTab)] isoBox=[$risoBox] ack=[$rackVal] prepare=[$rprepare] start=[$rstartVal] cancel=[$rcancelVal] statusLen=$rstatusLen combo=[$rcombo] previewLen=$rpreviewLen copy=[$rcopyVal]")
+                                                if ($rpreview) { Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message ("reinstall command preview: [$($rpreview.Text)]") }
+                                            }
+                                        } catch { Write-WinUtilLog -Level "WARN" -Component "UI" -Message ("reinstall tab probe failed: " + $_.Exception.Message) }
                                         # Round 13: switch to the Startup view and take a second
                                         # same-process image once layout has settled. Both views
                                         # then have pixel evidence from the real shown window.
